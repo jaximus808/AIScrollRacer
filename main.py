@@ -12,11 +12,52 @@ WIDTH = 900
 ACC = 0.5
 FRIC = -0.12
 FPS = 60
- 
+clock = pygame.time.Clock()
+PLATFORM_SIZE = 50;
+X_COUNT = int(WIDTH / PLATFORM_SIZE);
+
+MAP = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,
+        1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+
+
+platforms = pygame.sprite.Group()
+
 FramePerSec = pygame.time.Clock()
  
 displaysurface = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Game")
+
+all_sprites = pygame.sprite.Group()
 
 CAMERA_Y = HEIGHT - 50
 
@@ -105,45 +146,7 @@ class Player(pygame.sprite.Sprite):
 
     def update(self):
             
-            # if hits:
-
-                
-            #     width = hits[0].rect.width/2
-            #     height = hits[0].rect.height/2
-            #     direction = vec(0, abs((hits[0].rect.y - height)  - (self.pos.y+self.width/2)) );
-            #     if direction.y > height:
-            #         self.pos.y += -(self.vel + 0.5 *self.acc).y
-            #         self.vel.y = 0;
-            #         self.grounded = True;
-            #     elif (hits[0].rect.center[0] - (self.pos.x+self.width) ) > width or (hits[0].rect.center[0] - (self.pos.x-self.width)) > width:
-            #         self.pos.x += -(self.vel + 0.5 *self.acc).x
-            #         self.vel.x = 0;
-                
-
-                #
-                # if P1.rect.midtop[1] < hits[0].rect.midtop[1]:
-                #     self.pos.y += -(self.vel + 0.5 *self.acc).y
-                #     self.vel.y = 0;
-                #     self.grounded = True;
-                #     print('cock')
             
-                # elif P1.rect.midleft[0] > hits[0].rect.midleft[0] or P1.rect.midright[0] < hits[0].rect.midright[0]:
-                    
-                #     self.pos.x += -(self.vel + 0.5 *self.acc).x
-                #    self.vel.x = 0;
-                    
-                
-                    
-            # if hits:
-            #     self.grounded = True;
-            #     self.pos += -(self.vel + 0.5 *self.acc)*1.1 
-            #     self.vel = vec(0,0);
-            # else:
-            #     self.grounded = False;
-            #     #self.pos += -self.vel + 0.5 *self.acc
-                
-            #     # self.pos.y = hits[0].rect.top + 1
-            #     # self.vel.y = 0
             self.rect.midbottom = self.pos
     
 
@@ -161,24 +164,41 @@ class platform(pygame.sprite.Sprite):
 
 #RectSprite = SpriteRect(pygame.Rect((20, 50), (50, 100)))
 
-PT1 = platform((WIDTH/2, HEIGHT -80), (WIDTH, 300))
-PT2 = platform((WIDTH/2+100, HEIGHT-550), (50, 60))
-PT3 = platform((WIDTH/2, HEIGHT - 400), (50, 60))
 
-PT4 = platform((WIDTH/2 -200, HEIGHT - 500), (50, 60))
+def createEnviorment():
+    localHeight = HEIGHT - PLATFORM_SIZE/2
+    localStart = PLATFORM_SIZE/2
+    i = 0;
+    for y in range( int(((len(MAP))/X_COUNT)-1) ,0,-1):
+        for x in range(X_COUNT):
+            
+            if MAP[y*X_COUNT + x] == 1:
+                PT = platform((localStart + PLATFORM_SIZE*x, localHeight - i*PLATFORM_SIZE), (PLATFORM_SIZE, PLATFORM_SIZE))
+                platforms.add(PT)
+                all_sprites.add(PT)
+        i+= 1;
+createEnviorment();
+print(len(MAP))
+print(32*X_COUNT )  
+
+# PT1 = platform((WIDTH/2, HEIGHT -80), (WIDTH, 300))
+# PT2 = platform((WIDTH/2+100, HEIGHT-550), (50, 60))
+# PT3 = platform((WIDTH/2, HEIGHT - 400), (50, 60))
+
+# PT4 = platform((WIDTH/2 -200, HEIGHT - 500), (50, 60))
 
 
 P1 = Player((200,HEIGHT - 280),30)
-platforms = pygame.sprite.Group()
-platforms.add(PT1)
-platforms.add(PT2)
-platforms.add(PT3)
-platforms.add(PT4)
-all_sprites = pygame.sprite.Group()
-all_sprites.add(PT1)
-all_sprites.add(PT2)
-all_sprites.add(PT3)
-all_sprites.add(PT4)
+# platforms = pygame.sprite.Group()
+# platforms.add(PT1)
+# platforms.add(PT2)
+# platforms.add(PT3)
+# platforms.add(PT4)
+
+# all_sprites.add(PT1)
+# all_sprites.add(PT2)
+# all_sprites.add(PT3)
+# all_sprites.add(PT4)
 all_nonPlayerSprites = all_sprites.copy()
 all_sprites.add(P1)
 
@@ -200,5 +220,9 @@ while True:
         displaysurface.blit(entity.surf, entity.rect)
     P1.move();
     P1.update();
+    font = pygame.font.SysFont(None, 24)
+    img = font.render("fps: "+"{:.2f}".format(clock.get_fps()), True, "#20afdf")
+    clock.tick()
+    displaysurface.blit(img, (20, 20))
     pygame.display.update()
     FramePerSec.tick(FPS)
