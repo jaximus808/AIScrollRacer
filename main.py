@@ -30,7 +30,6 @@ def runLevel():
 
     all_sprites = pygame.sprite.Group()
 
-    CAMERA_Y = HEIGHT - 50
 
     class SpriteRect(pygame.sprite.Sprite):
             def __init__(self, width, pos):
@@ -56,6 +55,7 @@ def runLevel():
             self.width = width;
             self.JUMP_HEIGHT = jumpHeight;
             self.ACCVAL = acc; 
+            self.boost = False;
 
         
         
@@ -79,16 +79,20 @@ def runLevel():
             #self.pos += self.vel + 0.5 *self.acc
             self.temp = vec(0,0)
             delta = self.vel + 0.5 *self.acc;
-            if not self.collide(vec(self.pos.x + delta.x, self.pos.y-1)):
+            if not self.collide(vec(self.pos.x + delta.x, self.pos.y-1)) and self.pos.x > self.width/2 and self.pos.x <WIDTH:
                 self.temp.x = delta.x
             else:
+                if self.pos.x > self.width/2 or self.pos.x <WIDTH:
+                    self.temp.x = -delta.x
                 self.vel.x = 0;
-            if not self.collide(vec(self.pos.x , self.pos.y+ delta.y)):
+            curHit = self.collide(vec(self.pos.x , self.pos.y+ delta.y));
+            if not curHit:
                 #self.temp.y = delta.y
                 all_nonPlayerSprites.update(delta.y)
             else:
                 self.vel.y = 0;
                 self.grounded = True;
+                self.boost = curHit[0].boost
             self.pos += self.temp;
             
             # self.rect.midbottom = (self.pos.x + delta[0],self.pos.y);
@@ -114,8 +118,12 @@ def runLevel():
         
         def jump(self):
             if self.grounded:
-                self.vel.y = -self.JUMP_HEIGHT;
+                if self.boost:
+                    self.vel.y = -self.JUMP_HEIGHT * 2;
+                else:
+                    self.vel.y = -self.JUMP_HEIGHT;
                 self.grounded = False;
+                self.boost = False;
 
         def update(self):
                 
@@ -124,12 +132,13 @@ def runLevel():
         
 
     class platform(pygame.sprite.Sprite):
-        def __init__(self,position,size):
+        def __init__(self,position,size,boost,color):
             super().__init__()
             self.surf = pygame.Surface(size)
-            self.surf.fill((255,0,0))
+            self.surf.fill(color)
             self.rect = self.surf.get_rect(center = position)
             self.pos = vec(position)
+            self.boost = boost
         def update(self, dy):
             
             self.pos.y -= dy;
@@ -157,16 +166,21 @@ def runLevel():
                         pos = x;
                 else:
                     if prior:
-                        PT = platform(((PLATFORM_SIZE*pos + PLATFORM_SIZE*(counter+pos))/2, localHeight - i*PLATFORM_SIZE), (PLATFORM_SIZE*counter, PLATFORM_SIZE))
+                        PT = platform(((PLATFORM_SIZE*pos + PLATFORM_SIZE*(counter+pos))/2, localHeight - i*PLATFORM_SIZE), (PLATFORM_SIZE*counter, PLATFORM_SIZE), False,(255,0,0))
                         platforms.add(PT)
                         all_sprites.add(PT)
                         prior = False;
                         counter = 0;
                 if MAP[y*X_COUNT + x] == 9:
                     P1.pos= vec(PLATFORM_SIZE*x,localHeight - i*PLATFORM_SIZE)
+                if MAP[y*X_COUNT + x] == 2:
+                    PT = platform((localStart + x*PLATFORM_SIZE,localHeight - i*PLATFORM_SIZE), (PLATFORM_SIZE, PLATFORM_SIZE), True,(0,255,0))
+                    platforms.add(PT)
+                    all_sprites.add(PT)
+                    print("??")
 
             if prior:
-                PT = platform(((PLATFORM_SIZE*pos + PLATFORM_SIZE*(counter+pos))/2, localHeight - i*PLATFORM_SIZE), (PLATFORM_SIZE*counter, PLATFORM_SIZE))
+                PT = platform(((PLATFORM_SIZE*pos + PLATFORM_SIZE*(counter+pos))/2, localHeight - i*PLATFORM_SIZE), (PLATFORM_SIZE*counter, PLATFORM_SIZE), False,(255,0,0))
                 platforms.add(PT)
                 all_sprites.add(PT)
             i+= 1;
