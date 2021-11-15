@@ -30,6 +30,11 @@ def runLevel():
 
     all_sprites = pygame.sprite.Group()
 
+    boostOrbs = pygame.sprite.Group();
+
+    toggleBlocks = pygame.sprite.Group();
+
+    levers = pygame.sprite.Group();
 
     class SpriteRect(pygame.sprite.Sprite):
             def __init__(self, width, pos):
@@ -56,6 +61,7 @@ def runLevel():
             self.JUMP_HEIGHT = jumpHeight;
             self.ACCVAL = acc; 
             self.boost = False;
+            self.toggle = False;
 
         
         
@@ -64,6 +70,21 @@ def runLevel():
             hits = pygame.sprite.spritecollide(rectSprite, platforms, False);
             return hits 
         
+        def collideToggle(self, pos):
+            rectSprite = SpriteRect(self.width,pos)
+            hits = pygame.sprite.spritecollide(rectSprite, toggleBlocks, False);
+            return hits 
+
+        def collideBoostOrb(self, pos):
+            rectSprite = SpriteRect(self.width,pos)
+            hits = pygame.sprite.spritecollide(rectSprite, boostOrbs, False);
+            return hits 
+
+        def collideLever(self,pos):
+            rectSprite = SpriteRect(self.width,vec(pos.x, pos.y+1))
+            hits = pygame.sprite.spritecollide(rectSprite, levers, False);
+            return hits 
+
         def move(self):
             
             self.acc = vec(0,GRAVITY);
@@ -80,46 +101,54 @@ def runLevel():
             self.temp = vec(0,0)
             delta = self.vel + 0.5 *self.acc;
             if not self.collide(vec(self.pos.x + delta.x, self.pos.y-1)) and self.pos.x > self.width/2 and self.pos.x <WIDTH:
-                self.temp.x = delta.x
+                if self.toggle and self.collideToggle(vec(self.pos.x + delta.x, self.pos.y-1)):
+                    self.vel.x = 0;
+                else:
+                    self.temp.x = delta.x
             else:
-                if self.pos.x > self.width/2 or self.pos.x <WIDTH:
-                    self.temp.x = -delta.x
+                # if self.pos.x < self.width/2 or self.pos.x >WIDTH:
+                #     self.temp.x = -delta.x
+                
                 self.vel.x = 0;
             curHit = self.collide(vec(self.pos.x , self.pos.y+ delta.y));
             if not curHit:
                 #self.temp.y = delta.y
-                all_nonPlayerSprites.update(delta.y)
+                if not self.toggle or not self.collideToggle(vec(self.pos.x , self.pos.y+ delta.y)):
+                    all_nonPlayerSprites.update(delta.y,False, 0)
+                else:
+                    self.vel.y = 0;
+                    self.grounded = True;
+                    self.boost = False
             else:
                 self.vel.y = 0;
                 self.grounded = True;
                 self.boost = curHit[0].boost
             self.pos += self.temp;
             
-            # self.rect.midbottom = (self.pos.x + delta[0],self.pos.y);
-            # hits = pygame.sprite.spritecollide(P1, platforms, False);
-            # if hits:
-            #     self.rect.midbottom = (self.pos.x - delta[0],self.pos.y);
-            # self.rect.midbottom = (self.pos.x,self.pos.y + delta[0]);
-            # hits = pygame.sprite.spritecollide(P1, platforms, False);
-            # if hits:
-            #     self.rect.midbottom = (self.pos.x,self.pos.y - delta[0]);
-            # self.pos = vec(self.rect.midbottom)
-            # if(pygame.Rect(self.rect.x, self.rect.y + self.dy+1, # +1
-            #                 self.rect.width, self.rect.height)
-            #     .colliderect(platform.rect))
-
+          
                 
-            if self.pos.x > WIDTH:
-                self.pos.x = 0
-            if self.pos.x < 0:
-                self.pos.x = WIDTH
+            if self.pos.x > WIDTH-self.width/2:
+                self.pos.x = WIDTH-self.width/2
+            if self.pos.x < self.width/2:
+                self.pos.x = self.width/2+0.5
         
             self.rect.midbottom = self.pos
         
         def jump(self):
-            if self.grounded:
+            if self.collideBoostOrb(self.pos):
+                self.vel.y = -self.JUMP_HEIGHT * 1.8;
+            elif self.collideLever(self.pos+vec(0,10)):
+                self.vel.y = -self.JUMP_HEIGHT;
+                if self.toggle:
+                    self.toggle = False;
+                    toggleBlocks.update(0,True,(105, 77, 0))
+                else:
+                    
+                    toggleBlocks.update(0,True,(252, 186, 3))
+                    self.toggle = True
+            elif self.grounded:
                 if self.boost:
-                    self.vel.y = -self.JUMP_HEIGHT * 2;
+                    self.vel.y = -self.JUMP_HEIGHT * 1.8;
                 else:
                     self.vel.y = -self.JUMP_HEIGHT;
                 self.grounded = False;
@@ -139,12 +168,15 @@ def runLevel():
             self.rect = self.surf.get_rect(center = position)
             self.pos = vec(position)
             self.boost = boost
-        def update(self, dy):
-            
+        def update(self, dy,colorChange, color):
+            if colorChange:
+                self.surf.fill(color)
+                return
             self.pos.y -= dy;
             self.rect.center = vec(self.pos.x,self.pos.y)
-
-    #RectSprite = SpriteRect(pygame.Rect((20, 50), (50, 100)))
+            
+            
+            
 
 
     def createEnviorment():
@@ -177,8 +209,19 @@ def runLevel():
                     PT = platform((localStart + x*PLATFORM_SIZE,localHeight - i*PLATFORM_SIZE), (PLATFORM_SIZE, PLATFORM_SIZE), True,(0,255,0))
                     platforms.add(PT)
                     all_sprites.add(PT)
-                    print("??")
-
+                if MAP[y*X_COUNT+x] == 3:
+                    PT = platform((localStart + x*PLATFORM_SIZE,localHeight - i*PLATFORM_SIZE), (PLATFORM_SIZE-10, PLATFORM_SIZE-10), True,(0,255,170))
+                    all_sprites.add(PT);
+                    boostOrbs.add(PT)
+                if MAP[y*X_COUNT+x] == 4:
+                    PT = platform((localStart + x*PLATFORM_SIZE,localHeight - i*PLATFORM_SIZE), (PLATFORM_SIZE-10, PLATFORM_SIZE-10), False,(255,255,170))
+                    all_sprites.add(PT);
+                    levers.add(PT)
+                    platforms.add(PT)
+                if MAP[y*X_COUNT+x] == 5:
+                    PT = platform((localStart + x*PLATFORM_SIZE,localHeight - i*PLATFORM_SIZE), (PLATFORM_SIZE-10, PLATFORM_SIZE-10), False,(105, 77, 0))
+                    all_sprites.add(PT);
+                    toggleBlocks.add(PT)
             if prior:
                 PT = platform(((PLATFORM_SIZE*pos + PLATFORM_SIZE*(counter+pos))/2, localHeight - i*PLATFORM_SIZE), (PLATFORM_SIZE*counter, PLATFORM_SIZE), False,(255,0,0))
                 platforms.add(PT)
@@ -219,7 +262,9 @@ def runLevel():
                 sys.exit(0)
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE or event.key == pygame.K_w:
-                    P1.jump();
+                    P1.jump()
+                
+            
 
         
         displaysurface.fill((0,0,0))
