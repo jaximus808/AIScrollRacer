@@ -36,6 +36,9 @@ def runLevel():
 
     levers = pygame.sprite.Group();
 
+    gamers = pygame.sprite.Group();
+    winOb = []
+
     class SpriteRect(pygame.sprite.Sprite):
             def __init__(self, width, pos):
                 super().__init__()
@@ -174,7 +177,30 @@ def runLevel():
                 return
             self.pos.y -= dy;
             self.rect.center = vec(self.pos.x,self.pos.y)
-            
+
+    class goal(pygame.sprite.Sprite):
+        def __init__(self,position,size,boost,color):
+            super().__init__()
+            self.width = size[0];
+            self.surf = pygame.Surface(size)
+            self.surf.fill(color)
+            self.rect = self.surf.get_rect(center = position)
+            self.pos = vec(position)
+        def update(self, dy,colorChange, color):
+            if colorChange:
+                self.surf.fill(color)
+                return
+            self.pos.y -= dy;
+            self.rect.center = vec(self.pos.x,self.pos.y)   
+        def checkPlayer(self):
+            hit = self.collideVictory();
+            if hit:
+                print("victory")
+        def collideVictory(self):
+            rectSprite = SpriteRect(self.width,vec(self.pos.x, self.pos.y))
+            hits = pygame.sprite.spritecollide(rectSprite, gamers, False);
+            return hits
+
             
             
 
@@ -205,6 +231,7 @@ def runLevel():
                         counter = 0;
                 if MAP[y*X_COUNT + x] == 9:
                     P1.pos= vec(PLATFORM_SIZE*x,localHeight - i*PLATFORM_SIZE)
+                    gamers.add(P1)
                 if MAP[y*X_COUNT + x] == 2:
                     PT = platform((localStart + x*PLATFORM_SIZE,localHeight - i*PLATFORM_SIZE), (PLATFORM_SIZE, PLATFORM_SIZE), True,(0,255,0))
                     platforms.add(PT)
@@ -222,6 +249,11 @@ def runLevel():
                     PT = platform((localStart + x*PLATFORM_SIZE,localHeight - i*PLATFORM_SIZE), (PLATFORM_SIZE, PLATFORM_SIZE), False,(105, 77, 0))
                     all_sprites.add(PT);
                     toggleBlocks.add(PT)
+                if MAP[y*X_COUNT+x] == 8:
+                    print("wat")
+                    PT = goal((localStart + x*PLATFORM_SIZE,localHeight - i*PLATFORM_SIZE), (PLATFORM_SIZE, PLATFORM_SIZE), False,( 249, 46, 196 ))
+                    winOb.append(PT)
+                    all_sprites.add(PT);
             if prior:
                 PT = platform(((PLATFORM_SIZE*pos + PLATFORM_SIZE*(counter+pos))/2, localHeight - i*PLATFORM_SIZE), (PLATFORM_SIZE*counter, PLATFORM_SIZE), False,(255,0,0))
                 platforms.add(PT)
@@ -273,6 +305,7 @@ def runLevel():
             displaysurface.blit(entity.surf, entity.rect)
         P1.move();
         P1.update();
+        winOb[0].checkPlayer()
         font = pygame.font.SysFont(None, 24)
         img = font.render("fps: "+"{:.2f}".format(clock.get_fps()), True, "#20afdf")
         clock.tick()
