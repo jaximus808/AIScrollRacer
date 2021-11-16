@@ -219,7 +219,7 @@ def runLevel():
                     levers.add(PT)
                     platforms.add(PT)
                 if MAP[y*X_COUNT+x] == 5:
-                    PT = platform((localStart + x*PLATFORM_SIZE,localHeight - i*PLATFORM_SIZE), (PLATFORM_SIZE-10, PLATFORM_SIZE-10), False,(105, 77, 0))
+                    PT = platform((localStart + x*PLATFORM_SIZE,localHeight - i*PLATFORM_SIZE), (PLATFORM_SIZE, PLATFORM_SIZE), False,(105, 77, 0))
                     all_sprites.add(PT);
                     toggleBlocks.add(PT)
             if prior:
