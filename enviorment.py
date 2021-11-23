@@ -89,20 +89,20 @@ class GameEnv(gym.Env):
             yo = self.PLATFORM_SIZE;
             #adjacent of our ray cast triangle
             xo = -yo*aTan;
-            print("god help me")
-            print(rx)
+            
             
         else: #looking horizontal 
             rx = pos.x;
             ry = pos.y;
             dof = rayDist;
+            print("um")
         hit = False
         #actual raycast
         while (dof < rayDist):
             mx = floor(rx/self.PLATFORM_SIZE);
             my = floor(ry/self.PLATFORM_SIZE);
             mp = my * self.X_COUNT + mx;
-
+            
             
             #might need a check for hitting border of screen
             if mp > len(self.MAP):
@@ -111,7 +111,7 @@ class GameEnv(gym.Env):
                 yYS = ry;
              
                 dof = rayDist;
-            elif mp > 0 and mp < self.X_COUNT*self.yMapTileLength and self.MAP[mp-50] > 0:
+            elif mp > 0 and mp < self.X_COUNT*self.yMapTileLength and self.MAP[mp] > 0:
                 yXS = rx; 
                 yYS = ry;
                 dof = rayDist;
@@ -135,13 +135,14 @@ class GameEnv(gym.Env):
             ry = (pos.x - rx) * nTan+pos.y;
             xo = -self.PLATFORM_SIZE;
             yo = -xo * nTan;
-        if (ang < self.PI/2 and ang > 3*self.PI/2): #looking right
+        if (ang < self.PI/2 or ang > 3*self.PI/2): #looking right
             rx = floor(pos.x/self.PLATFORM_SIZE)*self.PLATFORM_SIZE +self.PLATFORM_SIZE;
             ry = (pos.x - rx) * nTan+pos.y;
             
             xo = self.PLATFORM_SIZE;
             yo = -xo * nTan;
         else:
+            print("um")
             ry = pos.x;
             rx = pos.y;
             dof = rayDist;
@@ -152,8 +153,9 @@ class GameEnv(gym.Env):
             mx = floor(rx/self.PLATFORM_SIZE);
             my = floor(ry/self.PLATFORM_SIZE);
             mp = my * self.X_COUNT + mx;
+            print("here")
+            print(mp)
             if mp > len(self.MAP):
-                print("?")
                 hit = True;
                 xXS = rx;
                 xYS = ry;
@@ -445,8 +447,8 @@ class GameEnv(gym.Env):
         #player doing stuff
         self.P1.move();
         self.P1.update();
-        dist, rayX, rayY =  self.raycast(self.P1.truePos,5,10)
-        pygame.draw.line(self.displaysurface,(255,255,0),(self.P1.pos.x,self.P1.pos.y),(rayX,self.PLATFORM_SIZE* (self.yMapTileLength+3)-rayY))
+        dist, rayX, rayY =  self.raycast(self.vec(self.P1.truePos.x,self.P1.truePos.y-self.P1.width/2),5,10)
+        pygame.draw.line(self.displaysurface,(255,255,0),(self.P1.pos.x,self.P1.pos.y-self.P1.width/2),(rayX,self.PLATFORM_SIZE* (self.yMapTileLength+3)-rayY))
         print([rayX,rayY])
         #pygame.draw.line(displaysurface,(255,255,255), (40,780), (80,720), 2)
         
