@@ -68,8 +68,7 @@ class GameEnv(gym.Env):
         distX = 1000000; 
         dof = 0
         ang = self.PI * degAngle/180 #to radians
-        print("position")
-        print(pos)
+        
         aTan = -1/self.math.tan(ang);
         if ang > self.PI: #looking down 
             #rounds down so good 
@@ -97,21 +96,18 @@ class GameEnv(gym.Env):
             dof = rayDist;
         hit = False
         #actual raycast
-        print("vertical")
         while (dof < rayDist):
             mx = floor(rx/self.PLATFORM_SIZE);
             my = floor(ry/self.PLATFORM_SIZE);
             mp = my * self.X_COUNT + mx;
             
-            print(mp)
             #might need a check for hitting border of screen
-            if mp < 0 or mp >= len(self.MAP):
+            if mp < 0 or mp >= len(self.MAP)or  mx > self.WIDTH:
                 hit = True;
                 yXS = rx;
                 yYS = ry;
-             
                 dof = rayDist;
-            elif mp > 0 and mp < self.X_COUNT*self.yMapTileLength and self.MAP[mp] > 0:
+            elif   self.MAP[mp] > 0:
                 yXS = rx; 
                 yYS = ry;
                 dof = rayDist;
@@ -147,18 +143,16 @@ class GameEnv(gym.Env):
             dof = rayDist;
 
         hit = False;
-        print("horizontal")
         while(dof < rayDist):
             mx = floor(rx/self.PLATFORM_SIZE);
             my = floor(ry/self.PLATFORM_SIZE);
             mp = my * self.X_COUNT + mx;
-            print(mp)
-            if mp < 0 or mp >= len(self.MAP):
+            if mp < 0 or mp >= len(self.MAP) or mx > self.WIDTH:
                 hit = True;
                 xXS = rx;
                 xYS = ry;
                 dof = rayDist;
-            elif mp > 0 and mp < self.yMapTileLength*self.X_COUNT and self.MAP[mp] > 0:
+            elif  self.MAP[mp] > 0:
                 hit = True;
                 xXS = rx;
                 xYS = ry;
@@ -171,28 +165,27 @@ class GameEnv(gym.Env):
         if not hit:
             distX = 1000000;
         else:
-            distX = dist([pos.x, pos.y], [yXS, yYS])
-        
+            distX = dist([pos.x, pos.y], [xXS, xYS])
+        hitBool = True;
         tX, tY = 0,0
         if distX < distY:
             
             tX = xXS;
             tY = xYS;
             distT = distX
+            
         elif distX > distY:
        
             tX = yXS;
             tY = yYS;
-     
             distT = distY
         else:
-           
+            hitBool = False;
             tX = xXS;
             tY = xYS;
             distT = distY
         
-        print([tX,tY])
-        return distT, tX, tY;
+        return distT, tX, tY, hitBool;
 
     class SpriteRect(pygame.sprite.Sprite):
         def __init__(self, width, pos, main ):
@@ -220,7 +213,7 @@ class GameEnv(gym.Env):
             self.ACCVAL = acc; 
             self.boost = False;
             self.toggle = False;
-            self.truePos = main.vec(self.pos.x, main.PLATFORM_SIZE* (main.yMapTileLength+3)  - self.pos.y);
+            self.truePos = main.vec(self.pos.x, main.PLATFORM_SIZE* (main.yMapTileLength)  -(main.HEIGHT- self.pos.y));
             print("playerPos")
             print(self.pos.y)
         
@@ -389,6 +382,7 @@ class GameEnv(gym.Env):
                         counter = 0;
                 if main.MAP[y*main.X_COUNT + x] == -1:
                     main.P1.pos= main.vec(main.PLATFORM_SIZE*x,localHeight - i*main.PLATFORM_SIZE)
+                    main.P1.truePos.y = y*main.PLATFORM_SIZE+(main.PLATFORM_SIZE - main.P1.width)/2; 
                     main.gamers.add(main.P1)
                 if main.MAP[y*main.X_COUNT + x] == 2:
                     PT = main.platform((localStart + x*main.PLATFORM_SIZE,localHeight - i*main.PLATFORM_SIZE), (main.PLATFORM_SIZE, main.PLATFORM_SIZE), True,(0,255,0),main)
@@ -446,9 +440,13 @@ class GameEnv(gym.Env):
         #player doing stuff
         self.P1.move();
         self.P1.update();
-        dist, rayX, rayY =  self.raycast(self.vec(self.P1.truePos.x,self.P1.truePos.y-self.P1.width/2),5,10)
-        pygame.draw.line(self.displaysurface,(255,255,0),(self.P1.pos.x,self.P1.pos.y-self.P1.width/2),(rayX,rayY-self.P1.truePos.y))
-        print([rayX,rayY])
+        for i in range(30):
+            dist, rayX, rayY, hitTrue =  self.raycast(self.vec(self.P1.truePos.x,self.P1.truePos.y-self.P1.width/2 +10),((i*12)+0.0001),20) 
+         
+            if hitTrue:
+                pygame.draw.line(self.displaysurface,(255,255,0),(self.P1.pos.x,self.P1.pos.y-self.P1.width/2),(rayX, self.P1.pos.y-self.P1.width/2-(self.P1.truePos.y - rayY) ))
+            
+        #print([rayX,rayY])
         #pygame.draw.line(displaysurface,(255,255,255), (40,780), (80,720), 2)
         
         #agent move
