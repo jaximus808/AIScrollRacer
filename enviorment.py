@@ -95,17 +95,17 @@ class GameEnv(gym.Env):
             rx = pos.x;
             ry = pos.y;
             dof = rayDist;
-            print("um")
         hit = False
         #actual raycast
+        print("vertical")
         while (dof < rayDist):
             mx = floor(rx/self.PLATFORM_SIZE);
             my = floor(ry/self.PLATFORM_SIZE);
             mp = my * self.X_COUNT + mx;
             
-            
+            print(mp)
             #might need a check for hitting border of screen
-            if mp > len(self.MAP):
+            if mp < 0 or mp >= len(self.MAP):
                 hit = True;
                 yXS = rx;
                 yYS = ry;
@@ -142,20 +142,18 @@ class GameEnv(gym.Env):
             xo = self.PLATFORM_SIZE;
             yo = -xo * nTan;
         else:
-            print("um")
             ry = pos.x;
             rx = pos.y;
             dof = rayDist;
 
         hit = False;
-
+        print("horizontal")
         while(dof < rayDist):
             mx = floor(rx/self.PLATFORM_SIZE);
             my = floor(ry/self.PLATFORM_SIZE);
             mp = my * self.X_COUNT + mx;
-            print("here")
             print(mp)
-            if mp > len(self.MAP):
+            if mp < 0 or mp >= len(self.MAP):
                 hit = True;
                 xXS = rx;
                 xYS = ry;
@@ -193,6 +191,7 @@ class GameEnv(gym.Env):
             tY = xYS;
             distT = distY
         
+        print([tX,tY])
         return distT, tX, tY;
 
     class SpriteRect(pygame.sprite.Sprite):
@@ -448,7 +447,7 @@ class GameEnv(gym.Env):
         self.P1.move();
         self.P1.update();
         dist, rayX, rayY =  self.raycast(self.vec(self.P1.truePos.x,self.P1.truePos.y-self.P1.width/2),5,10)
-        pygame.draw.line(self.displaysurface,(255,255,0),(self.P1.pos.x,self.P1.pos.y-self.P1.width/2),(rayX,self.PLATFORM_SIZE* (self.yMapTileLength+3)-rayY))
+        pygame.draw.line(self.displaysurface,(255,255,0),(self.P1.pos.x,self.P1.pos.y-self.P1.width/2),(rayX,rayY-self.P1.truePos.y))
         print([rayX,rayY])
         #pygame.draw.line(displaysurface,(255,255,255), (40,780), (80,720), 2)
         
