@@ -80,7 +80,7 @@ class GameEnv(gym.Env):
             #adjacent of our ray cast triangle
             xo = -yo *aTan;
             
-        if ang < self.PI: #looking up
+        elif ang < self.PI: #looking up
             #needs to account for rounding down and needs to always round up, 
             ry = floor(pos.y/self.PLATFORM_SIZE)*self.PLATFORM_SIZE + self.PLATFORM_SIZE;
             
@@ -131,7 +131,7 @@ class GameEnv(gym.Env):
             ry = (pos.x - rx) * nTan+pos.y;
             xo = -self.PLATFORM_SIZE;
             yo = -xo * nTan;
-        if (ang < self.PI/2 or ang > 3*self.PI/2): #looking right
+        elif (ang < self.PI/2 or ang > 3*self.PI/2): #looking right
             rx = floor(pos.x/self.PLATFORM_SIZE)*self.PLATFORM_SIZE +self.PLATFORM_SIZE;
             ry = (pos.x - rx) * nTan+pos.y;
             
