@@ -3,7 +3,7 @@ from gym.core import ActionWrapper
 from gym.spaces import space
 import gym
 import numpy as np
-#import pygame
+import pygame
 import sys
 import pygame
 #import pygame
@@ -17,10 +17,9 @@ class GameEnv(gym.Env):
     #from pygame.locals import * 
     import sys
     import math;
-    def __init__(self,agent,pygameEnv,env_config={}):
+    MAX_STEPS = 5000
+    def __init__(self,env_config={}):
         self.pygame.init();
-        self.agent = agent;
-        self.pygameEnv = pygameEnv
         self.vec = self.pygame.math.Vector2
         self.PI = self.math.pi;
             
@@ -50,16 +49,76 @@ class GameEnv(gym.Env):
 
         self.toggleBlocks = self.pygame.sprite.Group();
         self.gamers = self.pygame.sprite.Group();
+        self.AIgamers = self.pygame.sprite.Group();
         self.winOb = []
         self.levers = self.pygame.sprite.Group();
         self.P1 = self.Player((200,self.HEIGHT - 280),30, 15, 0.5,self)
+        self.agent = self.Agent((self.WIDTH -200,self.HEIGHT - 280),30, 15, 0.5,self)
+        self.AIgamers.add(self.agent)
         self.createEnviorment(self);
         self.all_nonPlayerSprites = self.all_sprites.copy()
         self.all_sprites.add(self.P1)
-        # self.observation_space = <gym.space>
-        # self.action_space = <gym.space>
+        self.all_sprites.add(self.agent)
+        self.raycastAmount = 30
+        self.reward = 0
+        self.huerstic = True
+        self.iterateReward = -0.001
+        self.highScoreReward = 0.3;
+        self.victoryReward = 5;
+        self.done = False;
+        # first dimesion is left and right, 0 means left, 1 means right, 2 menas do nothing 
+        # second dimension is jumping, 0 means do nothing , 1 means jump
+        self.action_space = gym.spaces.MultiDiscrete([3,2])
+        #ray cast points self.raycastAmount and colorId so that would be 60 points. Then we will give the yHeight so +1, 
+        # k screw numpy lmfao
+        # self.obArray = [];
+        # for i in range(30):
+        #     self.obArray.append((0,10000000000))
+        #     self.obArray.append((0,10))
+        # self.obArray.append((0,10000000))
+        # print(self.obArray)
+        numeric_min = np.zeros(self.raycastAmount*2 + 1)
+        self.state = numeric_min
+        numeric_max = np.zeros(self.raycastAmount*2 +1)
+        for i in range(self.raycastAmount):
+            numeric_max[i*2] = 100000000
+            numeric_max[i*2 +1] = 10
+        numeric_max[len(numeric_max)-1] = 100000000
+        print(numeric_max)
+        self.observation_space = gym.spaces.Box(numeric_min,numeric_max,dtype = np.float64)
+        self.info = {}
     
     #right now just try transfer files into class and be able to run the loop through some env.step method and then env.render or smth
+
+    def reset(self):
+        self.platforms = self.pygame.sprite.Group()
+        self.state = np.zeros(self.raycastAmount*2 + 1)
+        self.yMapTileLength = int(len(self.MAP)/(self.X_COUNT-1))
+
+        self.FramePerSec = self.pygame.time.Clock()
+
+        self.displaysurface = self.pygame.display.set_mode((self.WIDTH, self.HEIGHT))
+        self.pygame.display.set_caption("Game")
+
+        self.all_sprites = self.pygame.sprite.Group()
+
+        self.boostOrbs = self.pygame.sprite.Group();
+        self.done = False;
+        self.toggleBlocks = self.pygame.sprite.Group();
+        self.gamers = self.pygame.sprite.Group();
+        self.winOb = []
+        self.levers = self.pygame.sprite.Group();
+        self.P1 = self.Player((200,self.HEIGHT - 280),30, 15, 0.5,self)
+        self.agent = self.Agent((self.WIDTH -200,self.HEIGHT - 280),30, 15, 0.5,self)
+        self.gamers.add(self.agent)
+        self.createEnviorment(self);
+        self.all_nonPlayerSprites = self.all_sprites.copy()
+        self.all_sprites.add(self.P1)
+        self.all_sprites.add(self.agent)
+        self.reward = 0
+        self.info = {}
+        return self.state
+        
 
     def raycast(self, pos, degAngle,rayDist):
         mx,my,mp,dof,rx,ry,xo,yo,distT = 0,0,0,0,0,0,0,0,0
@@ -68,7 +127,8 @@ class GameEnv(gym.Env):
         distX = 1000000; 
         dof = 0
         ang = self.PI * degAngle/180 #to radians
-        
+        colorXId = 0;
+        colorYId = 0;
         aTan = -1/self.math.tan(ang);
         if ang > self.PI: #looking down 
             #rounds down so good 
@@ -107,7 +167,8 @@ class GameEnv(gym.Env):
                 yXS = rx;
                 yYS = ry;
                 dof = rayDist;
-            elif   self.MAP[mp] > 0:
+            elif self.MAP[mp] > 0:
+                colorYId = self.MAP[mp]
                 yXS = rx; 
                 yYS = ry;
                 dof = rayDist;
@@ -153,6 +214,7 @@ class GameEnv(gym.Env):
                 xYS = ry;
                 dof = rayDist;
             elif  self.MAP[mp] > 0:
+                colorXId = self.MAP[mp]
                 hit = True;
                 xXS = rx;
                 xYS = ry;
@@ -168,14 +230,15 @@ class GameEnv(gym.Env):
             distX = dist([pos.x, pos.y], [xXS, xYS])
         hitBool = True;
         tX, tY = 0,0
+        tColor = 0;
         if distX < distY:
-            
+            tColor = colorXId
             tX = xXS;
             tY = xYS;
             distT = distX
             
         elif distX > distY:
-       
+            tColor = colorYId
             tX = yXS;
             tY = yYS;
             distT = distY
@@ -185,7 +248,7 @@ class GameEnv(gym.Env):
             tY = xYS;
             distT = distY
         
-        return distT, tX, tY, hitBool;
+        return distT, tX, tY, tColor, hitBool;
 
     class SpriteRect(pygame.sprite.Sprite):
         def __init__(self, width, pos, main ):
@@ -268,6 +331,7 @@ class GameEnv(gym.Env):
                 #self.temp.y = delta.y
                 if not self.toggle or not self.collideToggle(self.main.vec(self.pos.x , self.pos.y+ delta.y)):
                     self.main.all_nonPlayerSprites.update(delta.y,False, 0)
+                    self.main.agent.update(delta.y)
                     self.truePos.y += delta.y
                 else:
                     self.vel.y = 0;
@@ -313,6 +377,140 @@ class GameEnv(gym.Env):
                 
                 
                 self.rect.midbottom = self.pos
+    class Agent(pygame.sprite.Sprite):
+        def __init__(self,pos,width, jumpHeight,acc,main):
+            super().__init__()
+            self.main = main; 
+            self.surf = main.pygame.Surface((30, 30))
+            self.surf.fill((140, 13, 62))
+            self.rect = self.surf.get_rect(center = pos)
+            self.pos = main.vec(pos)
+            #self.displayPos = vec(pos)
+            self.vel = main.vec(0,0)
+            self.acc = main.vec(0,0)
+            self.grounded = False;
+            self.width = width;
+            self.JUMP_HEIGHT = jumpHeight;
+            self.ACCVAL = acc; 
+            self.boost = False;
+            self.toggle = False;
+            self.highScoreY = self.pos.y; 
+            
+            #self.truePos = self.pos#main.vec(self.pos.x, main.PLATFORM_SIZE* (main.yMapTileLength)  -(main.HEIGHT- self.pos.y));
+            print("playerPos")
+            print(self.pos.y)
+        
+        def collide(self, pos):
+            rectSprite = self.main.SpriteRect(self.width,pos,self.main)
+            hits = self.main.pygame.sprite.spritecollide(rectSprite, self.main.platforms, False);
+            return hits 
+        
+        def collideToggle(self, pos):
+            rectSprite = self.main.SpriteRect(self.width,pos,self.main)
+            hits = self.main.pygame.sprite.spritecollide(rectSprite, self.main.toggleBlocks, False);
+            return hits 
+
+        def collideBoostOrb(self, pos):
+            rectSprite = self.main.SpriteRect(self.width,pos,self.main)
+            hits = self.main.pygame.sprite.spritecollide(rectSprite, self.main.boostOrbs, False);
+            return hits 
+
+        def collideLever(self,pos):
+            rectSprite = self.main.SpriteRect(self.width,self.main.vec(pos.x, pos.y+1),self.main)
+            hits = self.main.pygame.sprite.spritecollide(rectSprite, self.main.levers, False);
+            return hits 
+
+        def move(self,inputArray):
+            
+            #inputArray= 2 dimensional
+            # 1: 0, 1, 2. Left and right and nothing
+            # 2: 0, 1. nothing and jump
+
+            self.acc = self.main.vec(0,self.main.GRAVITY);
+            
+            #pressed_keys = self.main.pygame.key.get_pressed();
+            jumpInput = inputArray[1]
+            horizontalIn = inputArray[0]
+            if horizontalIn == 0:
+                self.acc.x = -self.ACCVAL
+            if horizontalIn == 1:
+                self.acc.x = self.ACCVAL
+
+            self.acc.x += self.vel.x * self.main.FRIC
+            self.vel += self.acc
+            #self.pos += self.vel + 0.5 *self.acc
+            self.temp = self.main.vec(0,0)
+            delta = self.vel + 0.5 *self.acc;
+            if not self.collide(self.main.vec(self.pos.x + delta.x, self.pos.y-1)) and self.pos.x > self.width/2 and self.pos.x <self.main.WIDTH:
+                if self.toggle and self.collideToggle(self.main.vec(self.pos.x + delta.x, self.pos.y-1)):
+                    self.vel.x = 0;
+                else:
+                    self.temp.x = delta.x
+            
+            else:
+                # if self.pos.x < self.width/2 or self.pos.x >WIDTH:
+                #     self.temp.x = -delta.x
+                
+                self.vel.x = 0;
+            curHit = self.collide(self.main.vec(self.pos.x , self.pos.y+ delta.y));
+            if not curHit:
+                #self.temp.y = delta.y
+                if not self.toggle or not self.collideToggle(self.main.vec(self.pos.x , self.pos.y+ delta.y)):
+                    #self.main.all_nonPlayerSprites.update(delta.y,False, 0)
+                    self.pos.y += delta.y
+                else:
+                    self.vel.y = 0;
+                    self.grounded = True;
+                    self.boost = False
+            else:
+                self.vel.y = 0;
+                self.grounded = True;
+                self.boost = curHit[0].boost
+            self.pos += self.temp;
+            
+            
+                
+            if self.pos.x > self.main.WIDTH-self.width/2:
+                self.pos.x = self.main.WIDTH-self.width/2
+            if self.pos.x < self.width/2:
+                self.pos.x = self.width/2+0.5
+            #self.truePos.x = self.pos.x;
+            #print(self.truePos)
+            newHigh = False;
+            if self.pos.y > self.highScoreY:
+                newHigh = True;
+                self.highScoreY = self.pos.y;
+
+            if jumpInput == 1:
+                self.jump();
+
+            
+            self.rect.midbottom = self.main.vec(self.pos.x,self.pos.y)
+            return newHigh; 
+        
+        def jump(self):
+            if self.collideBoostOrb(self.pos):
+                self.vel.y = -self.JUMP_HEIGHT * 1.8;
+            elif self.collideLever(self.pos+self.main.vec(0,10)):
+                self.vel.y = -self.JUMP_HEIGHT;
+                if self.toggle:
+                    self.toggle = False;
+                    self.main.toggleBlocks.update(0,True,(105, 77, 0))
+                else:
+                    
+                    self.main.toggleBlocks.update(0,True,(252, 186, 3))
+                    self.toggle = True
+            elif self.grounded:
+                if self.boost:
+                    self.vel.y = -self.JUMP_HEIGHT * 1.8;
+                else:
+                    self.vel.y = -self.JUMP_HEIGHT;
+                self.grounded = False;
+                self.boost = False;
+
+        def update(self, dy):
+            self.pos.y -= dy;
+            #self.rect.midbottom = self.truePos
     
     class goal(pygame.sprite.Sprite):
         def __init__(self,position,size,boost,color,main):
@@ -323,6 +521,7 @@ class GameEnv(gym.Env):
             self.surf.fill(color)
             self.rect = self.surf.get_rect(center = position)
             self.pos = main.vec(position)
+            self.truePos = main.vec(position); 
         def update(self, dy,colorChange, color):
             if colorChange:
                 self.surf.fill(color)
@@ -332,10 +531,18 @@ class GameEnv(gym.Env):
         def checkPlayer(self):
             hit = self.collideVictory();
             if hit:
+                self.main.reset();
                 print("victory")
+        def checkAI(self):
+            hit = self.collideVictoryAI();
+            return hit; 
         def collideVictory(self):
             rectSprite = self.main.SpriteRect(self.width,self.main.vec(self.pos.x, self.pos.y),self.main)
             hits = self.main.pygame.sprite.spritecollide(rectSprite, self.main.gamers, False);
+            return hits
+        def collideVictoryAI(self):
+            rectSprite = self.main.SpriteRect(self.width,self.main.vec(self.pos.x, self.pos.y),self.main)
+            hits = self.main.pygame.sprite.spritecollide(rectSprite, self.main.AIgamers, False);
             return hits
 
     class platform(pygame.sprite.Sprite):
@@ -347,6 +554,7 @@ class GameEnv(gym.Env):
             self.rect = self.surf.get_rect(center = position)
             self.pos = main.vec(position)
             self.boost = boost
+            self.truePos = main.vec(position); 
         def update(self, dy,colorChange, color):
             if colorChange:
                 self.surf.fill(color)
@@ -412,16 +620,33 @@ class GameEnv(gym.Env):
                 main.all_sprites.add(PT)
             i+= 1;
             
-    def render():
-        print("hi"); # will do something more here
 
-    def reset(self):
-        self.pygameEnv.resetEnv();
+    def render(self):
+        self.displaysurface.fill((0,0,0))
+        for entity in self.all_sprites:
+            self.displaysurface.blit(entity.surf, entity.rect)
+        font = self.pygame.font.SysFont(None, 24)
+        img = font.render("fps: "+"{:.2f}".format(self.clock.get_fps()), True, "#20afdf")
+        self.clock.tick()
+        self.displaysurface.blit(img, (20, 20))
+        self.pygame.display.update()
+        self.FramePerSec.tick(self.FPS)
 
     def step(self, action=np.zeros((2),dtype=np.float)):
         #action[0] left and right 0: nothing, 1: move left, 2: move right
         #action[1] jump 0: nothing, 1: jump
         
+        inputArray = action;
+        if(self.huerstic):
+            inputArray = [2,0]
+            pressed_keys = self.pygame.key.get_pressed();
+            if pressed_keys[K_j]:
+                inputArray[0] = 0
+            elif pressed_keys[K_l]:
+                inputArray[0] = 1
+                    
+            if pressed_keys[K_i]:
+                inputArray[1] = 1
         for event in self.pygame.event.get():
             if event.type == QUIT:
                 self.pygame.quit()
@@ -430,36 +655,41 @@ class GameEnv(gym.Env):
                 if event.key == self.pygame.K_SPACE or event.key == self.pygame.K_w:
                     self.P1.jump()
                 
-            
-
+                # if event.key == self.pygame.K_j:
+                #     inputArray[0] = 0
+                # elif event.key == self.pygame.K_l:
+                #     inputArray[0] = 1
+                
+                # if event.key == self.pygame.K_i:
+                #     inputArray[1] = 1
+        self.reward = 0;
+        highCond = self.agent.move(inputArray) 
+        if highCond:
+            self.reward += self.highScoreReward
+        if self.winOb[0].checkAI():
+            self.done = True;
+            self.reward += self.victoryReward;
+        self.reward -= self.iterateReward
         
-        self.displaysurface.fill((0,0,0))
-        
-        for entity in self.all_sprites:
-            self.displaysurface.blit(entity.surf, entity.rect)
         #player doing stuff
         self.P1.move();
         self.P1.update();
-        for i in range(30):
-            dist, rayX, rayY, hitTrue =  self.raycast(self.vec(self.P1.truePos.x,self.P1.truePos.y-self.P1.width/2 +10),((i*12)+0.0001),20) 
-         
-            if hitTrue:
-                pygame.draw.line(self.displaysurface,(255,255,0),(self.P1.pos.x,self.P1.pos.y-self.P1.width/2),(rayX, self.P1.pos.y-self.P1.width/2-(self.P1.truePos.y - rayY) ))
-            
-        #print([rayX,rayY])
-        #pygame.draw.line(displaysurface,(255,255,255), (40,780), (80,720), 2)
         
-        #agent move
-        #enviorment.step(action)
-        self.winOb[0].checkPlayer()
-        font = self.pygame.font.SysFont(None, 24)
-        img = font.render("fps: "+"{:.2f}".format(self.clock.get_fps()), True, "#20afdf")
-        self.clock.tick()
-        self.displaysurface.blit(img, (20, 20))
-        self.pygame.display.update()
-        self.FramePerSec.tick(self.FPS)
+        for i in range(self.raycastAmount):
+            dist, rayX, rayY, color, hitTrue =  self.raycast(self.vec(self.agent.pos.x,self.agent.pos.y-self.agent.width/2 +10),((i*(360/self.raycastAmount))+0.0001),20) 
+            self.state[i*2] = dist
+            self.state[i*2 + 1] = color
+
+        self.state[len(self.state)-1] = self.agent.pos.y;
+
+        self.info["height"] = self.agent.pos.y
+
+        self.winOb[0].checkAI()
+        return [self.state,self.reward,self.done,self.info]
+        
 
 if __name__ == "__main__":
-    currentGameEnv = GameEnv(1,2);
+    currentGameEnv = GameEnv();
     while True:
         currentGameEnv.step();
+        currentGameEnv.render();
