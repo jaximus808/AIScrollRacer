@@ -4,8 +4,8 @@ import gym_plat
 def run_one_episode(env, verbose=False):
     env.reset();
     sum_reward = 0
-
-    for i in range(env.MAX_STEPS):
+    print("balls")
+    for i in range(100):
         action = env.action_space.sample()
         state, reward, done, info = env.step(action)
         if verbose:
@@ -27,7 +27,7 @@ def main ():
     # (no policy)
     history = []
 
-    for _ in range(10000):
+    for _ in range(500):
         sum_reward = run_one_episode(env, verbose=False)
         history.append(sum_reward)
 
