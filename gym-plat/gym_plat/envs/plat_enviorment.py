@@ -61,7 +61,7 @@ class GameEnv(gym.Env):
         self.all_sprites.add(self.agent)
         self.raycastAmount = 30
         self.reward = 0
-        self.huerstic = True
+        self.huerstic = False
         self.iterateReward = -0.001
         self.highScoreReward = 0.3;
         self.victoryReward = 5;
@@ -87,14 +87,16 @@ class GameEnv(gym.Env):
         print(numeric_max)
         self.observation_space = gym.spaces.Box(numeric_min,numeric_max,dtype = np.float64)
         self.info = {}
+        self.count = 0
     
     #right now just try transfer files into class and be able to run the loop through some env.step method and then env.render or smth
 
     def reset(self):
+        print("about to reset")
         self.platforms = self.pygame.sprite.Group()
         self.state = np.zeros(self.raycastAmount*2 + 1)
         self.yMapTileLength = int(len(self.MAP)/(self.X_COUNT-1))
-
+        self.count = 0
         self.FramePerSec = self.pygame.time.Clock()
 
         self.displaysurface = self.pygame.display.set_mode((self.WIDTH, self.HEIGHT))
@@ -621,7 +623,7 @@ class GameEnv(gym.Env):
             i+= 1;
             
 
-    def render(self):
+    def render(self,mode="human"):
         self.displaysurface.fill((0,0,0))
         for entity in self.all_sprites:
             self.displaysurface.blit(entity.surf, entity.rect)
@@ -635,56 +637,67 @@ class GameEnv(gym.Env):
     def step(self, action=np.zeros((2),dtype=np.float)):
         #action[0] left and right 0: nothing, 1: move left, 2: move right
         #action[1] jump 0: nothing, 1: jump
-        
-        inputArray = action;
-        if(self.huerstic):
-            inputArray = [2,0]
-            pressed_keys = self.pygame.key.get_pressed();
-            if pressed_keys[K_j]:
-                inputArray[0] = 0
-            elif pressed_keys[K_l]:
-                inputArray[0] = 1
+        if self.count == self.MAX_STEPS:
+            self.done = True
+        else:
+            assert self.action_space.contains(action)
+            self.count += 1
+
+            inputArray = action;
+            if(self.huerstic):
+                inputArray = [2,0]
+                pressed_keys = self.pygame.key.get_pressed();
+                if pressed_keys[K_j]:
+                    inputArray[0] = 0
+                elif pressed_keys[K_l]:
+                    inputArray[0] = 1
+                        
+                if pressed_keys[K_i]:
+                    inputArray[1] = 1
+            for event in self.pygame.event.get():
+                if event.type == QUIT:
+                    self.pygame.quit()
+                    self.sys.exit(0)
+                if event.type == self.pygame.KEYDOWN:
+                    if event.key == self.pygame.K_SPACE or event.key == self.pygame.K_w:
+                        self.P1.jump()
                     
-            if pressed_keys[K_i]:
-                inputArray[1] = 1
-        for event in self.pygame.event.get():
-            if event.type == QUIT:
-                self.pygame.quit()
-                self.sys.exit(0)
-            if event.type == self.pygame.KEYDOWN:
-                if event.key == self.pygame.K_SPACE or event.key == self.pygame.K_w:
-                    self.P1.jump()
-                
-                # if event.key == self.pygame.K_j:
-                #     inputArray[0] = 0
-                # elif event.key == self.pygame.K_l:
-                #     inputArray[0] = 1
-                
-                # if event.key == self.pygame.K_i:
-                #     inputArray[1] = 1
-        self.reward = 0;
-        highCond = self.agent.move(inputArray) 
-        if highCond:
-            self.reward += self.highScoreReward
-        if self.winOb[0].checkAI():
-            self.done = True;
-            self.reward += self.victoryReward;
-        self.reward -= self.iterateReward
-        
-        #player doing stuff
-        self.P1.move();
-        self.P1.update();
-        
-        for i in range(self.raycastAmount):
-            dist, rayX, rayY, color, hitTrue =  self.raycast(self.vec(self.agent.pos.x,self.agent.pos.y-self.agent.width/2 +10),((i*(360/self.raycastAmount))+0.0001),20) 
-            self.state[i*2] = dist
-            self.state[i*2 + 1] = color
+                    # if event.key == self.pygame.K_j:
+                    #     inputArray[0] = 0
+                    # elif event.key == self.pygame.K_l:
+                    #     inputArray[0] = 1
+                    
+                    # if event.key == self.pygame.K_i:
+                    #     inputArray[1] = 1
+            self.reward = 0;
+            highCond = self.agent.move(inputArray) 
+            if highCond:
+                self.reward += self.highScoreReward
+            if self.winOb[0].checkAI():
+                self.done = True;
+                self.reward += self.victoryReward;
+            self.reward -= self.iterateReward
+            
+            #player doing stuff
+            self.P1.move();
+            self.P1.update();
+            
+            for i in range(self.raycastAmount):
+                dist, rayX, rayY, color, hitTrue =  self.raycast(self.vec(self.agent.pos.x,self.agent.pos.y-self.agent.width/2 +10),((i*(360/self.raycastAmount))+0.0001),20) 
+                self.state[i*2] = dist
+                self.state[i*2 + 1] = color
 
-        self.state[len(self.state)-1] = self.agent.pos.y;
+            self.state[len(self.state)-1] = self.agent.pos.y;
 
-        self.info["height"] = self.agent.pos.y
+            self.info["height"] = self.agent.pos.y
 
-        self.winOb[0].checkAI()
+            self.winOb[0].checkAI()
+            
+            self.winOb[0].checkPlayer()
+        try:
+            assert self.observation_space.contains(self.state)
+        except AssertionError:
+            print("INVALID STATE", self.state)
         return [self.state,self.reward,self.done,self.info]
         
 
